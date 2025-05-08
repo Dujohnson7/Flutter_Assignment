@@ -1,4 +1,4 @@
-# secondapp
+# flutterAssignment
 
 A new Flutter project.
 
