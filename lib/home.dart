@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:secondapp/model/todo_model.dart';
+import 'package:flutterAssignment/model/todo_model.dart';
 import 'todo_detail.dart';
 
 class HomePage extends StatefulWidget {
