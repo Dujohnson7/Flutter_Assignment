@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import "package:flutterAssignment/model/todo_model.dart";
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'model/todo_model.dart';
+import 'providers/todo_provider.dart';
+import 'providers/theme_provider.dart';
 
-class TodoDetailPage extends StatefulWidget {
+class TodoDetailPage extends ConsumerWidget {
   final Todo todo;
   final Function(Todo) onTodoUpdated;
 
@@ -12,202 +15,178 @@ class TodoDetailPage extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<TodoDetailPage> createState() => _TodoDetailPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categories = ['Personal', 'Work', 'School', 'Urgent', 'Health'];
+    final isOverdue = todo.dueDate != null &&
+        todo.dueDate!.isBefore(DateTime.now()) &&
+        !todo.isCompleted;
 
-class _TodoDetailPageState extends State<TodoDetailPage> {
-  late Todo _currentTodo;
-  final List<String> _categories = ['Personal', 'Work', 'School', 'Urgent', 'Health'];
+    void _editTodo() {
+      final titleController = TextEditingController(text: todo.title);
+      final descriptionController = TextEditingController(text: todo.description ?? '');
+      String selectedCategory = todo.category;
+      DateTime? selectedDueDate = todo.dueDate;
 
-  @override
-  void initState() {
-    super.initState();
-    _currentTodo = widget.todo;
-  }
-
-  void _editTodo() {
-    final TextEditingController titleController =
-    TextEditingController(text: _currentTodo.title);
-    final TextEditingController descriptionController =
-    TextEditingController(text: _currentTodo.description ?? '');
-    String selectedCategory = _currentTodo.category;
-    DateTime? selectedDueDate = _currentTodo.dueDate;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Edit Todo'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: titleController,
-                      decoration: InputDecoration(
-                        labelText: 'Title',
-                        hintText: 'Enter todo title',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
+      showDialog(
+        context: context,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: const Text('Edit Todo'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: titleController,
+                        decoration: InputDecoration(
+                          labelText: 'Title',
+                          hintText: 'Enter todo title',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
                         ),
-                        filled: true,
-                        fillColor: Colors.grey[100],
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: descriptionController,
-                      decoration: InputDecoration(
-                        labelText: 'Description',
-                        hintText: 'Enter todo description',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: descriptionController,
+                        decoration: InputDecoration(
+                          labelText: 'Description',
+                          hintText: 'Enter todo description',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
                         ),
-                        filled: true,
-                        fillColor: Colors.grey[100],
+                        maxLines: 3,
                       ),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 16),
-                    // Category Dropdown
-                    DropdownButtonFormField<String>(
-                      value: selectedCategory,
-                      decoration: InputDecoration(
-                        labelText: 'Category',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: selectedCategory,
+                        decoration: InputDecoration(
+                          labelText: 'Category',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
                         ),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                      ),
-                      items: _categories.map((category) {
-                        return DropdownMenuItem(
-                          value: category,
-                          child: Text(category),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setDialogState(() {
-                          selectedCategory = value!;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    // Due Date Picker
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(10),
-                        color: Colors.grey[100],
-                      ),
-                      child: ListTile(
-                        title: Text(selectedDueDate == null
-                            ? 'Select Due Date (Optional)'
-                            : 'Due: ${selectedDueDate!.day}/${selectedDueDate!.month}/${selectedDueDate!.year}'),
-                        leading: const Icon(Icons.calendar_today),
-                        trailing: selectedDueDate != null
-                            ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            setDialogState(() {
-                              selectedDueDate = null;
-                            });
-                          },
-                        )
-                            : null,
-                        onTap: () async {
-                          final DateTime? picked = await showDatePicker(
-                            context: context,
-                            initialDate: selectedDueDate ?? DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                        items: categories.map((category) {
+                          return DropdownMenuItem(
+                            value: category,
+                            child: Text(category),
                           );
-                          if (picked != null) {
-                            setDialogState(() {
-                              selectedDueDate = picked;
-                            });
-                          }
+                        }).toList(),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            selectedCategory = value!;
+                          });
                         },
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel',
-                      style: TextStyle(color: Colors.grey)),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (titleController.text.isNotEmpty) {
-                      final updatedTodo = Todo.update(
-                        id: _currentTodo.id,
-                        title: titleController.text,
-                        description: descriptionController.text.isEmpty
-                            ? null
-                            : descriptionController.text,
-                        isCompleted: _currentTodo.isCompleted,
-                        createdAt: _currentTodo.createdAt,
-                        category: selectedCategory,
-                        dueDate: selectedDueDate,
-                      );
-                      setState(() => _currentTodo = updatedTodo);
-                      widget.onTodoUpdated(updatedTodo);
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
+                      const SizedBox(height: 16),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.grey[100],
+                        ),
+                        child: ListTile(
+                          title: Text(selectedDueDate == null
+                              ? 'Select Due Date (Optional)'
+                              : 'Due: ${selectedDueDate!.day}/${selectedDueDate!.month}/${selectedDueDate!.year}'),
+                          leading: const Icon(Icons.calendar_today),
+                          trailing: selectedDueDate != null
+                              ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedDueDate = null;
+                              });
+                            },
+                          )
+                              : null,
+                          onTap: () async {
+                            final DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDueDate ?? DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                selectedDueDate = picked;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Text('Save',
-                      style: TextStyle(color: Colors.white)),
                 ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Color _getCategoryColor(String category) {
-    switch (category) {
-      case 'Work':
-        return Colors.blue;
-      case 'Personal':
-        return Colors.green;
-      case 'School':
-        return Colors.orange;
-      case 'Urgent':
-        return Colors.red;
-      case 'Health':
-        return Colors.purple;
-      default:
-        return Colors.grey;
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (titleController.text.isNotEmpty) {
+                        final updatedTodo = Todo.update(
+                          id: todo.id,
+                          title: titleController.text,
+                          description: descriptionController.text.isEmpty
+                              ? null
+                              : descriptionController.text,
+                          isCompleted: todo.isCompleted,
+                          createdAt: todo.createdAt,
+                          category: selectedCategory,
+                          dueDate: selectedDueDate,
+                        );
+                        onTodoUpdated(updatedTodo);
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    child: const Text('Save', style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final isOverdue = _currentTodo.dueDate != null &&
-        _currentTodo.dueDate!.isBefore(DateTime.now()) &&
-        !_currentTodo.isCompleted;
+    Color _getCategoryColor(String category) {
+      switch (category) {
+        case 'Work':
+          return Colors.blue;
+        case 'Personal':
+          return Colors.green;
+        case 'School':
+          return Colors.orange;
+        case 'Urgent':
+          return Colors.red;
+        case 'Health':
+          return Colors.purple;
+        default:
+          return Colors.grey;
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Todo Details',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        title: const Text('Todo Details', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: Container(
@@ -221,6 +200,35 @@ class _TodoDetailPageState extends State<TodoDetailPage> {
             onPressed: _editTodo,
             tooltip: 'Edit Todo',
           ),
+          PopupMenuButton<ThemeModeOption>(
+            icon: const Icon(Icons.brightness_6),
+            onSelected: (ThemeModeOption value) {
+              ref.read(themeModeProvider.notifier).state = value;
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<ThemeModeOption>>[
+              const PopupMenuItem<ThemeModeOption>(
+                value: ThemeModeOption.light,
+                child: ListTile(
+                  leading: Icon(Icons.wb_sunny, color: Colors.amber),
+                  title: Text('Light'),
+                ),
+              ),
+              const PopupMenuItem<ThemeModeOption>(
+                value: ThemeModeOption.dark,
+                child: ListTile(
+                  leading: Icon(Icons.nightlight_round, color: Colors.blueGrey),
+                  title: Text('Dark'),
+                ),
+              ),
+              const PopupMenuItem<ThemeModeOption>(
+                value: ThemeModeOption.system,
+                child: ListTile(
+                  leading: Icon(Icons.settings_system_daydream, color: Colors.grey),
+                  title: Text('System'),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -229,11 +237,9 @@ class _TodoDetailPageState extends State<TodoDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title and Status
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade200),
               ),
@@ -243,25 +249,25 @@ class _TodoDetailPageState extends State<TodoDetailPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          _currentTodo.title,
+                          todo.title,
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
-                            decoration: _currentTodo.isCompleted ? TextDecoration.lineThrough : null,
-                            color: _currentTodo.isCompleted ? Colors.grey : null,
+                            decoration: todo.isCompleted ? TextDecoration.lineThrough : null,
+                            color: todo.isCompleted ? Colors.grey : null,
                           ),
                         ),
                       ),
                       Chip(
                         label: Text(
-                          _currentTodo.isCompleted ? 'Completed' : 'Pending',
+                          todo.isCompleted ? 'Completed' : 'Pending',
                           style: TextStyle(
-                            color: _currentTodo.isCompleted
+                            color: todo.isCompleted
                                 ? Colors.green.shade800
                                 : Colors.orange.shade800,
                           ),
                         ),
-                        backgroundColor: _currentTodo.isCompleted
+                        backgroundColor: todo.isCompleted
                             ? Colors.green.shade100
                             : Colors.orange.shade100,
                         shape: RoundedRectangleBorder(
@@ -273,11 +279,10 @@ class _TodoDetailPageState extends State<TodoDetailPage> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      // Category chip
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: _getCategoryColor(_currentTodo.category).withOpacity(0.2),
+                          color: _getCategoryColor(todo.category).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -286,13 +291,13 @@ class _TodoDetailPageState extends State<TodoDetailPage> {
                             Icon(
                               Icons.category,
                               size: 16,
-                              color: _getCategoryColor(_currentTodo.category),
+                              color: _getCategoryColor(todo.category),
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              _currentTodo.category,
+                              todo.category,
                               style: TextStyle(
-                                color: _getCategoryColor(_currentTodo.category),
+                                color: _getCategoryColor(todo.category),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -300,8 +305,7 @@ class _TodoDetailPageState extends State<TodoDetailPage> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Due date info
-                      if (_currentTodo.dueDate != null)
+                      if (todo.dueDate != null)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
@@ -318,7 +322,7 @@ class _TodoDetailPageState extends State<TodoDetailPage> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                isOverdue ? 'Overdue' : 'Due: ${_currentTodo.dueDate!.day}/${_currentTodo.dueDate!.month}/${_currentTodo.dueDate!.year}',
+                                isOverdue ? 'Overdue' : 'Due: ${todo.dueDate!.day}/${todo.dueDate!.month}/${todo.dueDate!.year}',
                                 style: TextStyle(
                                   color: isOverdue ? Colors.red : Colors.blue,
                                   fontWeight: FontWeight.w600,
@@ -333,7 +337,6 @@ class _TodoDetailPageState extends State<TodoDetailPage> {
               ),
             ),
             const SizedBox(height: 24),
-
             const Text(
               'Description',
               style: TextStyle(
@@ -347,17 +350,15 @@ class _TodoDetailPageState extends State<TodoDetailPage> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: Text(
-                _currentTodo.description ?? 'No description provided',
+                todo.description ?? 'No description provided',
                 style: const TextStyle(fontSize: 16),
               ),
             ),
             const SizedBox(height: 24),
-
             const Text(
               'Created on',
               style: TextStyle(
@@ -371,7 +372,6 @@ class _TodoDetailPageState extends State<TodoDetailPage> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade200),
               ),
@@ -380,14 +380,13 @@ class _TodoDetailPageState extends State<TodoDetailPage> {
                   const Icon(Icons.today, color: Colors.grey),
                   const SizedBox(width: 8),
                   Text(
-                    '${_currentTodo.createdAt.day}/${_currentTodo.createdAt.month}/${_currentTodo.createdAt.year} at ${_currentTodo.createdAt.hour}:${_currentTodo.createdAt.minute.toString().padLeft(2, '0')}',
+                    '${todo.createdAt.day}/${todo.createdAt.month}/${todo.createdAt.year} at ${todo.createdAt.hour}:${todo.createdAt.minute.toString().padLeft(2, '0')}',
                     style: const TextStyle(fontSize: 16),
                   ),
                 ],
               ),
             ),
-
-            if (_currentTodo.dueDate != null) ...[
+            if (todo.dueDate != null) ...[
               const SizedBox(height: 24),
               const Text(
                 'Due Date',
@@ -416,7 +415,7 @@ class _TodoDetailPageState extends State<TodoDetailPage> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '${_currentTodo.dueDate!.day}/${_currentTodo.dueDate!.month}/${_currentTodo.dueDate!.year}',
+                      '${todo.dueDate!.day}/${todo.dueDate!.month}/${todo.dueDate!.year}',
                       style: TextStyle(
                         fontSize: 16,
                         color: isOverdue ? Colors.red : Colors.blue,

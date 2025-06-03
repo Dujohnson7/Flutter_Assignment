@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'home.dart';
+import 'providers/todo_provider.dart';
+import 'providers/theme_provider.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _isPasswordVisible = false;
 
   @override
   void dispose() {
@@ -21,11 +23,8 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-
-
   void _login() {
     if (_formKey.currentState!.validate()) {
-      // Add verification for specific email and password
       if (_emailController.text != 'Johnson@gmail.com' ||
           _passwordController.text != '12345678') {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -50,6 +49,41 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('CheckMe'),
+        actions: [
+          PopupMenuButton<ThemeModeOption>(
+            icon: const Icon(Icons.brightness_6),
+            onSelected: (ThemeModeOption value) {
+              ref.read(themeModeProvider.notifier).state = value;
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<ThemeModeOption>>[
+              const PopupMenuItem<ThemeModeOption>(
+                value: ThemeModeOption.light,
+                child: ListTile(
+                  leading: Icon(Icons.wb_sunny, color: Colors.amber),
+                  title: Text('Light'),
+                ),
+              ),
+              const PopupMenuItem<ThemeModeOption>(
+                value: ThemeModeOption.dark,
+                child: ListTile(
+                  leading: Icon(Icons.nightlight_round, color: Colors.blueGrey),
+                  title: Text('Dark'),
+                ),
+              ),
+              const PopupMenuItem<ThemeModeOption>(
+                value: ThemeModeOption.system,
+                child: ListTile(
+                  leading: Icon(Icons.settings_system_daydream, color: Colors.grey),
+                  title: Text('System'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -99,34 +133,37 @@ class _LoginPageState extends State<LoginPage> {
                   },
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.lock),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                Consumer(
+                  builder: (context, ref, child) {
+                    final isPasswordVisible = ref.watch(passwordVisibilityProvider);
+                    return TextFormField(
+                      controller: _passwordController,
+                      obscureText: !isPasswordVisible,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            isPasswordVisible
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            ref.read(passwordVisibilityProvider.notifier).state = !isPasswordVisible;
+                          },
+                        ),
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _isPasswordVisible = !_isPasswordVisible;
-                        });
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        if (value.length < 8) {
+                          return 'Password must be at least 8 characters';
+                        }
+                        return null;
                       },
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (value.length < 8) {
-                      return 'Password must be at least 8 characters';
-                    }
-                    return null;
+                    );
                   },
                 ),
                 const SizedBox(height: 24),
@@ -148,3 +185,5 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+
+final passwordVisibilityProvider = StateProvider<bool>((ref) => false);
